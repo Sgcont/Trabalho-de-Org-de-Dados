@@ -20,6 +20,11 @@ except:
   #Em caso de sem internet
   df = pd.read_csv('imdb_top_1000.csv')
 
+# Agrupar por gênero e calcular a média do IMDB_Rating
+genero_notas_IMDB = df.assign(Genre=df['Genre'].str.split(',')).explode('Genre').groupby('Genre')['IMDB_Rating'].agg('mean').sort_values(ascending=False)
+genero_notas_Meta = df.assign(Genre=df['Genre'].str.split(',')).explode('Genre').groupby('Genre')['Meta_score'].agg('mean').sort_values(ascending=False)
+
+
 # Função para gerar o histograma de notas do IMDB
 def plot_imdb_histogram():
     fig, ax = plt.subplots()
@@ -72,34 +77,36 @@ if analysis_type == "Visão Geral":
   st.write(df.info())
   st.write(df.isnull().sum())
     
-  # Momento de tirar os 'is null' desse data frame na visão de dados medianas ou strings demonstrando que não foi informado
-  df['Certificate'].fillna('Não informado')
-
-  # Fazendo uma variável para armazenar a receita bruta na forma de inteiro (já que veio no dataset em str com virgulas separando)
-  Novo_Gross = pd.to_numeric(df['Gross'].str.replace(',', ''), errors='coerce')
-
-  # Fazendo a mediana (agora que podemos fazer depois de tirar de str para float)
-  mediana_gross = Novo_Gross.median()
-
-  # Trocando os com Gross NaN pela mediana_gross
-  Novo_Gross.fillna(mediana_gross, inplace=True)
-
-  # Fazendo nossa coluna do Gross pela nova coluna com inteiros!
-  df['Gross'] = Novo_Gross
-
-  # Código para trocar os valores nulos em Meta_score pela mediana
-  # Verificando se há valores nulos na coluna 'Meta_score' e contando-os
-  valores_nulos = df['Meta_score'].isnull().sum()
-  print(f"Quantidade de valores nulos em 'Meta_score': {valores_nulos}, trocaremos esses valores pela mediana!")
-
-  # Calculando a mediana da coluna 'Meta_score' (excluindo valores nulos)
-  mediana_meta_score = df['Meta_score'].dropna().median()
-
-  # Preenchendo os valores nulos com a mediana
-  df.fillna({'Meta_score' : mediana_meta_score}, inplace=True)
   st.write("Usamos Dados Brutos (criando até dados Agregados no momento de médias) e Dados secundários tirados de: https://www.kaggle.com/datasets/harshitshankhdhar/imdb-dataset-of-top-1000-movies-and-tv-shows/data e Dados Estruturados")
 
-elif analysis_type == "Classificação Indicativa":
+# Momento de tirar os 'is null' desse data frame na visão de dados medianas ou strings demonstrando que não foi informado
+df['Certificate'].fillna('Não informado')
+
+# Fazendo uma variável para armazenar a receita bruta na forma de inteiro (já que veio no dataset em str com virgulas separando)
+Novo_Gross = pd.to_numeric(df['Gross'].str.replace(',', ''), errors='coerce')
+
+# Fazendo a mediana (agora que podemos fazer depois de tirar de str para float)
+mediana_gross = Novo_Gross.median()
+
+# Trocando os com Gross NaN pela mediana_gross
+Novo_Gross.fillna(mediana_gross, inplace=True)
+
+# Fazendo nossa coluna do Gross pela nova coluna com inteiros!
+df['Gross'] = Novo_Gross
+
+# Código para trocar os valores nulos em Meta_score pela mediana
+# Verificando se há valores nulos na coluna 'Meta_score' e contando-os
+valores_nulos = df['Meta_score'].isnull().sum()
+
+# Calculando a mediana da coluna 'Meta_score' (excluindo valores nulos)
+mediana_meta_score = df['Meta_score'].dropna().median()
+
+# Preenchendo os valores nulos com a mediana
+df.fillna({'Meta_score' : mediana_meta_score}, inplace=True)
+
+
+
+if analysis_type == "Classificação Indicativa":
   # Agrupar e contar as ocorrências de cada certificado
   certificados = df['Certificate'].value_counts()
 
@@ -128,6 +135,24 @@ elif analysis_type == "Gêneros":
   generos = df['Genre'].str.split(',').explode().str.strip().value_counts()
   st.header("Análise de Gêneros")
   plot_genre_wordcloud()
+  
+  # Gráfico de barras para genero_notas_IMDB
+  st.subheader("Nota Média do IMDB por Gênero")  # Título do gráfico
+  fig, ax = plt.subplots(figsize=(10, 6))  # Cria a figura e os eixos
+  ax.bar(genero_notas_IMDB.index, genero_notas_IMDB.values)
+  ax.set_xlabel("Gêneros")
+  ax.set_ylabel("Nota Média do IMDB")
+  ax.set_xticklabels(genero_notas_IMDB.index, rotation=45, ha='right')  # Rotaciona os rótulos do eixo x
+  st.pyplot(fig)  # Exibe o gráfico no Streamlit
+
+  # Gráfico de barras para genero_notas_Meta
+  st.subheader("Nota Média do Meta Score por Gênero")  # Título do gráfico
+  fig, ax = plt.subplots(figsize=(10, 6))  # Cria a figura e os eixos
+  ax.bar(genero_notas_Meta.index, genero_notas_Meta.values)
+  ax.set_xlabel("Gêneros")
+  ax.set_ylabel("Nota Média do Meta Score")
+  ax.set_xticklabels(genero_notas_Meta.index, rotation=45, ha='right')  # Rotaciona os rótulos do eixo x
+  st.pyplot(fig)  # Exibe o gráfico no Streamlit
   st.write("O Gênero mais comum é: " + str(generos.index[0]))
   st.write("O Gênero mais raro é: " + str(generos.index[len(generos)-1]))
 
